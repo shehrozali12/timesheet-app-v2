@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
-import { entries } from "@/lib/data";
+import pool from "@/lib/db";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const entry = entries.find((e) => e.id === Number(id));
 
-  if (!entry) {
+  const result = await pool.query(
+    "SELECT * FROM timesheet_entries WHERE id = $1",
+    [id]
+  );
+
+  if (result.rows.length === 0) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
-  return NextResponse.json(entry);
+  return NextResponse.json(result.rows[0]);
 }
 
 export async function DELETE(
@@ -20,13 +24,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const index = entries.findIndex((e) => e.id === Number(id));
 
-  if (index === -1) {
+  const result = await pool.query(
+    "DELETE FROM timesheet_entries WHERE id = $1 RETURNING *",
+    [id]
+  );
+
+  if (result.rows.length === 0) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
-  entries.splice(index, 1);
-
-  return NextResponse.json({ message: "Entry deleted" });
+  return NextResponse.json({ message: "Entry deleted", entry: result.rows[0] });
 }
