@@ -1,33 +1,23 @@
 import { NextResponse } from "next/server";
-
-type TimesheetEntry = {
-  id: number;
-  employee: string;
-  date: string;
-  hours: number;
-};
-
-// In-memory data store (resets on server restart — temporary, for learning)
-let entries: TimesheetEntry[] = [
-  { id: 1, employee: "Shari", date: "2026-07-28", hours: 8 },
-  { id: 2, employee: "Ali", date: "2026-07-29", hours: 7.5 },
-];
+import pool from "@/lib/db";
 
 export async function GET() {
-  return NextResponse.json(entries);
+  const result = await pool.query(
+    "SELECT * FROM timesheet_entries ORDER BY entry_date DESC"
+  );
+  return NextResponse.json(result.rows);
 }
 
 export async function POST(request: Request) {
   const body = await request.json();
+  const { employee, date, hours } = body;
 
-  const newEntry: TimesheetEntry = {
-    id: entries.length + 1,
-    employee: body.employee,
-    date: body.date,
-    hours: body.hours,
-  };
+  const result = await pool.query(
+    `INSERT INTO timesheet_entries (employee, entry_date, hours)
+     VALUES ($1, $2, $3)
+     RETURNING *`,
+    [employee, date, hours]
+  );
 
-  entries.push(newEntry);
-
-  return NextResponse.json(newEntry, { status: 201 });
+  return NextResponse.json(result.rows[0], { status: 201 });
 }
