@@ -9,7 +9,7 @@ export async function GET() {
       description: "API for managing timesheet entries",
     },
     servers: [
-      { url: "https://your-actual-url.vercel.app/api" },
+      { url: "https://timesheet-app-v2.vercel.app/api" },
     ],
     components: {
       securitySchemes: {
