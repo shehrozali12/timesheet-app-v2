@@ -8,9 +8,18 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await pool.query(
-      "SELECT * FROM timesheet_entries ORDER BY entry_date DESC"
-    );
+    const result = await pool.query(`
+      SELECT
+        te.id,
+        te.employee_id,
+        e.name AS employee_name,
+        te.entry_date,
+        te.hours,
+        te.created_at
+      FROM timesheet_entries te
+      JOIN employees e ON te.employee_id = e.id
+      ORDER BY te.entry_date DESC
+    `);
     return NextResponse.json({ data: result.rows });
   } catch (error) {
     console.error("GET /api/entries error:", error);
@@ -28,20 +37,20 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { employee, date, hours } = body;
+    const { employee_id, date, hours } = body;
 
-    if (!employee || !date || !hours) {
+    if (!employee_id || !date || !hours) {
       return NextResponse.json(
-        { error: "Missing required fields: employee, date, hours" },
+        { error: "Missing required fields: employee_id, date, hours" },
         { status: 400 }
       );
     }
 
     const result = await pool.query(
-      `INSERT INTO timesheet_entries (employee, entry_date, hours)
+      `INSERT INTO timesheet_entries (employee_id, entry_date, hours)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [employee, date, hours]
+      [employee_id, date, hours]
     );
 
     return NextResponse.json({ data: result.rows[0] }, { status: 201 });
