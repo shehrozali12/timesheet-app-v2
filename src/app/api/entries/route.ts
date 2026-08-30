@@ -1,21 +1,29 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { isAuthorized } from "@/lib/auth";
+import { isAuthorized, checkRateLimit } from "@/lib/auth";
 
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { success, limit, remaining } = await checkRateLimit(request);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Try again shortly." },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": limit.toString(),
+          "X-RateLimit-Remaining": remaining.toString(),
+        },
+      }
+    );
+  }
+
   try {
     const result = await pool.query(`
-      SELECT
-        te.id,
-        te.employee_id,
-        e.name AS employee_name,
-        te.entry_date,
-        te.hours,
-        te.created_at
+      SELECT te.id, te.employee_id, e.name AS employee_name, te.entry_date, te.hours, te.created_at
       FROM timesheet_entries te
       JOIN employees e ON te.employee_id = e.id
       ORDER BY te.entry_date DESC
